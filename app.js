@@ -1,12 +1,16 @@
 (() => {
 const $ = id => document.getElementById(id);
 const client = window.edulegderClient;
-let currentUser = null, profile = null, charges = [], payments = [];
-const fmt = n => `${Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2})} ${window.EDULEDGER_CONFIG.CURRENCY_LABEL}`;
+const CFG = window.EDULEDGER_CONFIG;
+const STUDENT_DOMAIN = CFG.STUDENT_EMAIL_DOMAIN || "students.cems.app";
+let currentUser = null, profile = null, charges = [], payments = [], notifications = [], pollTimer = null, knownUnread = null;
+const fmt = n => `${Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2})} ${CFG.CURRENCY_LABEL}`;
 const statusText = s => ({pending:"قيد المراجعة",confirmed:"مؤكد",rejected:"مرفوض"}[s]||s);
-function toast(msg){const t=$("toast");t.textContent=msg;t.classList.remove("hidden");setTimeout(()=>t.classList.add("hidden"),3000)}
+const METHODS = {bankak:"بنكك",fawry:"فوري",other:"أخرى"};
+const esc = v => String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.remove("hidden");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.add("hidden"),3500)}
 function authMessage(msg){$("studentAuthMessage").textContent=msg}
-function showView(name){document.querySelectorAll("#studentApp .view-section").forEach(x=>x.classList.add("hidden"));$("view-"+name).classList.remove("hidden");document.querySelectorAll("#studentApp .nav-link").forEach(b=>b.classList.toggle("active",b.dataset.view===name));const titles={overview:"نظرة عامة",statement:"كشف الحساب",payments:"مدفوعاتي"};$("studentPageTitle").textContent=titles[name];$("studentBreadcrumb").textContent="الحساب المالي / "+titles[name]}
+function showView(name){document.querySelectorAll("#studentApp .view-section").forEach(x=>x.classList.add("hidden"));$("view-"+name).classList.remove("hidden");document.querySelectorAll("#studentApp .nav-link").forEach(b=>b.classList.toggle("active",b.dataset.view===name));const titles={overview:"نظرة عامة",statement:"كشف الحساب",payments:"مدفوعاتي",notifications:"الإشعارات"};$("studentPageTitle").textContent=titles[name];$("studentBreadcrumb").textContent="الحساب المالي / "+titles[name];if(name==="notifications")openNotifications()}
 function statusPill(s){return `<span class="status-pill ${s}">${statusText(s)}</span>`}
 async function loadAccount(){
  const [pRes,cRes,payRes]=await Promise.all([
@@ -21,31 +25,65 @@ async function loadAccount(){
  renderStatement();renderPayments();renderRecent();
 }
 function renderStatement(){
- const feeRows=charges.map(c=>`<tr><td>${c.fee_types?.name||c.description||"رسوم"}</td><td>${c.term_label||"—"}</td><td>${new Date(c.created_at).toLocaleDateString("ar")}</td><td>${fmt(c.amount)}</td><td><span class="status-pill">مستحق</span></td></tr>`);
- const payRows=payments.map(p=>`<tr><td>دفعة · ${p.method}</td><td>—</td><td>${new Date(p.created_at).toLocaleDateString("ar")}</td><td>${fmt(p.amount)}</td><td>${statusPill(p.status)}</td></tr>`);
+ const feeRows=charges.map(c=>`<tr><td>${esc(c.fee_types?.name||c.description||"رسوم")}</td><td>${esc(c.term_label||"—")}</td><td>${new Date(c.created_at).toLocaleDateString("ar")}</td><td>${fmt(c.amount)}</td><td><span class="status-pill">مستحق</span></td></tr>`);
+ const payRows=payments.map(p=>`<tr><td>دفعة · ${esc(METHODS[p.method]||p.method)}</td><td>—</td><td>${new Date(p.created_at).toLocaleDateString("ar")}</td><td>${fmt(p.amount)}</td><td>${statusPill(p.status)}</td></tr>`);
  $("statementRows").innerHTML=[...feeRows,...payRows].join("")||'<tr><td colspan="5" class="empty-state">لا توجد حركات مالية مسجلة.</td></tr>';
 }
 function renderPayments(){
- $("paymentHistory").innerHTML=payments.map(p=>`<div class="activity-item"><div class="activity-symbol">↗</div><div class="activity-copy"><b>${fmt(p.amount)} · ${p.method}</b><small>${p.transaction_ref} · ${new Date(p.created_at).toLocaleDateString("ar")}</small>${p.status==="rejected"&&p.rejection_reason?`<small>سبب الرفض: ${p.rejection_reason}</small>`:""}</div>${statusPill(p.status)}</div>`).join("")||'<div class="empty-state">لم ترسل أي إثبات دفع بعد.</div>';
+ $("paymentHistory").innerHTML=payments.map(p=>`<div class="activity-item"><div class="activity-symbol">↗</div><div class="activity-copy"><b>${fmt(p.amount)} · ${esc(METHODS[p.method]||p.method)}</b><small>${esc(p.transaction_ref)} · ${new Date(p.created_at).toLocaleDateString("ar")}</small>${p.status==="rejected"&&p.rejection_reason?`<small>سبب الرفض: ${esc(p.rejection_reason)}</small>`:""}</div>${statusPill(p.status)}</div>`).join("")||'<div class="empty-state">لم ترسل أي إثبات دفع بعد.</div>';
 }
 function renderRecent(){
- const all=[...charges.map(c=>({kind:"fee",label:c.fee_types?.name||c.description||"رسوم",amount:c.amount,date:c.created_at})),...payments.map(p=>({kind:"payment",label:"دفعة "+p.method,amount:p.amount,status:p.status,date:p.created_at}))].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
- $("recentActivity").innerHTML=all.map(x=>`<div class="activity-item"><div class="activity-symbol">${x.kind==="fee"?"▤":"↗"}</div><div class="activity-copy"><b>${x.label}</b><small>${new Date(x.date).toLocaleDateString("ar")}</small></div><span class="activity-amount">${fmt(x.amount)}</span>${x.status?statusPill(x.status):""}</div>`).join("")||'<div class="empty-state">لا توجد حركات مالية حتى الآن.</div>';
+ const all=[...charges.map(c=>({kind:"fee",label:c.fee_types?.name||c.description||"رسوم",amount:c.amount,date:c.created_at})),...payments.map(p=>({kind:"payment",label:"دفعة "+(METHODS[p.method]||p.method),amount:p.amount,status:p.status,date:p.created_at}))].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+ $("recentActivity").innerHTML=all.map(x=>`<div class="activity-item"><div class="activity-symbol">${x.kind==="fee"?"▤":"↗"}</div><div class="activity-copy"><b>${esc(x.label)}</b><small>${new Date(x.date).toLocaleDateString("ar")}</small></div><span class="activity-amount">${fmt(x.amount)}</span>${x.status?statusPill(x.status):""}</div>`).join("")||'<div class="empty-state">لا توجد حركات مالية حتى الآن.</div>';
 }
-async function handleLogin(e){e.preventDefault();if(!client){authMessage("أكمل إعداد config.js وملف قاعدة البيانات أولًا.");return}authMessage("جارٍ التحقق من بيانات الدخول...");const {data,error}=await client.auth.signInWithPassword({email:$("studentEmail").value.trim(),password:$("studentPassword").value});if(error){authMessage("تعذر تسجيل الدخول. تحقق من البيانات أو تواصل مع الإدارة.");return}currentUser=data.user;try{await loadAccount();$("authScreen").classList.add("hidden");$("studentApp").classList.remove("hidden");showView("overview")}catch(err){await client.auth.signOut();authMessage("تعذر تحميل السجل: "+err.message)}}
+
+/* ---------- الإشعارات ---------- */
+async function loadNotifications(){
+ const {data,error}=await client.from("notifications").select("id,title,body,kind,created_at,notification_recipients!inner(read_at,student_id)").eq("notification_recipients.student_id",currentUser.id).order("created_at",{ascending:false}).limit(50);
+ if(error)return;
+ notifications=(data||[]).map(n=>({id:n.id,title:n.title,body:n.body,kind:n.kind,created_at:n.created_at,unread:!(n.notification_recipients&&n.notification_recipients[0]&&n.notification_recipients[0].read_at)}));
+ const unread=notifications.filter(n=>n.unread).length;
+ $("notifBadge").textContent=unread;$("notifBadge").classList.toggle("hidden",!unread);
+ if(knownUnread!==null&&unread>knownUnread)toast("وصلك إشعار جديد من الإدارة المالية");
+ knownUnread=unread;
+ renderNotifications();
+}
+function renderNotifications(){
+ $("notificationList").innerHTML=notifications.map(n=>`<div class="activity-item"><div class="activity-symbol">${n.kind==="fee"?"▤":"✉"}</div><div class="activity-copy"><b>${esc(n.title)}${n.unread?' <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--teal);margin-right:4px"></span>':""}</b><small style="white-space:normal;line-height:1.9">${esc(n.body)}</small><small>${new Date(n.created_at).toLocaleDateString("ar")}</small></div></div>`).join("")||'<div class="empty-state">لا توجد إشعارات.</div>';
+}
+async function openNotifications(){
+ renderNotifications();
+ if(!notifications.some(n=>n.unread))return;
+ await client.rpc("mark_notifications_read");
+ knownUnread=0;$("notifBadge").classList.add("hidden");
+ // نترك علامة غير المقروء ظاهرة حتى يغادر الطالب الصفحة ثم تتحدّث عند الجلب التالي
+ setTimeout(()=>loadNotifications(),1500);
+}
+function startPolling(){clearInterval(pollTimer);knownUnread=null;loadNotifications();pollTimer=setInterval(()=>{if(currentUser)loadNotifications()},60000)}
+
+async function enterApp(){
+ await loadAccount();
+ $("authScreen").classList.add("hidden");$("studentApp").classList.remove("hidden");
+ startPolling();
+}
+async function handleLogin(e){e.preventDefault();if(!client){authMessage("أكمل إعداد config.js وملف قاعدة البيانات أولًا.");return}authMessage("جارٍ التحقق من بيانات الدخول...");
+ const id=$("studentEmail").value.trim();const email=id.includes("@")?id:`${id}@${STUDENT_DOMAIN}`.toLowerCase();
+ const {data,error}=await client.auth.signInWithPassword({email,password:$("studentPassword").value});if(error){authMessage("تعذر تسجيل الدخول. تحقق من البيانات أو تواصل مع الإدارة.");return}
+ currentUser=data.user;try{await enterApp();showView("overview")}catch(err){await client.auth.signOut();authMessage("تعذر تحميل السجل: "+err.message)}}
 async function submitPayment(e){e.preventDefault();if(!client)return;const file=$("paymentProof").files[0];if(!file||file.size>5*1024*1024){$("paymentMessage").textContent="اختر ملفًا لا يتجاوز 5MB.";return}if(!["image/png","image/jpeg","application/pdf"].includes(file.type)){toast("نوع الملف غير مدعوم");return}
- const ref=$("transactionRef").value.trim();const {data:dup}=await client.from("payments").select("id").eq("transaction_ref",ref).maybeSingle();if(dup){$("paymentMessage").textContent="رقم العملية مستخدم من قبل.";return}
+ const ref=$("transactionRef").value.trim();
+ const dup=await client.rpc("transaction_ref_exists",{p_ref:ref});if(dup.data===true){$("paymentMessage").textContent="رقم العملية مستخدم من قبل.";return}
  $("paymentMessage").textContent="جارٍ رفع الإثبات...";const ext=file.name.split(".").pop().toLowerCase(),path=`${currentUser.id}/${crypto.randomUUID()}.${ext}`;
- const up=await client.storage.from(window.EDULEDGER_CONFIG.STORAGE_BUCKET).upload(path,file,{upsert:false,contentType:file.type});if(up.error){$("paymentMessage").textContent="تعذر رفع الملف: "+up.error.message;return}
+ const up=await client.storage.from(CFG.STORAGE_BUCKET).upload(path,file,{upsert:false,contentType:file.type});if(up.error){$("paymentMessage").textContent="تعذر رفع الملف: "+up.error.message;return}
  const ins=await client.from("payments").insert({student_id:currentUser.id,amount:Number($("paymentAmount").value),method:$("paymentMethod").value,transaction_ref:ref,payment_date:$("paymentDate").value,proof_path:path,status:"pending"});
  if(ins.error){$("paymentMessage").textContent="تعذر تسجيل الدفعة: "+ins.error.message;return}
  $("paymentForm").reset();$("paymentMessage").textContent="تم إرسال إثبات الدفع للمراجعة.";await loadAccount();toast("تم إرسال إثبات الدفع");
 }
-async function logout(){if(client)await client.auth.signOut();currentUser=null;profile=null;$("studentApp").classList.add("hidden");$("authScreen").classList.remove("hidden")}
+async function logout(){clearInterval(pollTimer);if(client)await client.auth.signOut();currentUser=null;profile=null;notifications=[];$("studentApp").classList.add("hidden");$("authScreen").classList.remove("hidden")}
 document.addEventListener("DOMContentLoaded",()=>{
  $("studentLoginForm").addEventListener("submit",handleLogin);$("paymentForm").addEventListener("submit",submitPayment);$("studentLogout").addEventListener("click",logout);$("printStatement").addEventListener("click",()=>window.print());
  document.querySelectorAll("#studentApp [data-view]").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));document.querySelectorAll("#studentApp [data-go]").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.go)));
  if(!client)authMessage("لم يتم إعداد Supabase بعد. راجع README قبل تجربة تسجيل الدخول.");
- if(client)client.auth.getSession().then(({data})=>{if(data.session){currentUser=data.session.user;loadAccount().then(()=>{$("authScreen").classList.add("hidden");$("studentApp").classList.remove("hidden")}).catch(()=>client.auth.signOut())}});
+ if(client)client.auth.getSession().then(({data})=>{if(data.session){currentUser=data.session.user;enterApp().catch(()=>client.auth.signOut())}});
 });
 })();
