@@ -93,4 +93,3 @@ document.addEventListener("DOMContentLoaded",()=>{
  if(!client)authMessage("لم يتم إعداد Supabase بعد. راجع README قبل تجربة تسجيل الدخول.");
  if(client)client.auth.getSession().then(({data})=>{if(data.session){currentUser=data.session.user;enterApp().catch(()=>client.auth.signOut())}});
 });
-})();
