@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#01265d">
+  <title>منصة الإدارة المالية | بوابة الطالب</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="student-body">
+  <header class="hero">
+    <img class="hero-logo" src="logo.png" alt="شعار كلية العلوم الهندسية والطبية CEMS">
+    <h1>منصة الإدارة المالية</h1>
+    <p>بوابة متكاملة لإدارة الشؤون المالية للطلاب والموظفين في كلية العلوم الهندسية والطبية - CEMS</p>
+  </header>
+
+  <div class="auth-screen" id="authScreen">
+    <form class="auth-card" id="studentLoginForm">
+      <span class="eyebrow">بوابة الطالب</span>
+      <h2>تسجيل دخول الطالب</h2>
+      <p class="muted">ادخل بالرقم الجامعي (أو البريد الإلكتروني) وكلمة المرور المسجلة لدى الكلية.</p>
+      <label>الرقم الجامعي أو البريد الإلكتروني<input id="studentEmail" type="text" inputmode="email" autocomplete="username" autocapitalize="none" placeholder="مثال: 20231045" required></label>
+      <label>كلمة المرور<input id="studentPassword" type="password" autocomplete="current-password" placeholder="••••••••" required></label>
+      <button class="btn btn-primary btn-wide" type="submit">دخول إلى حسابي <span>←</span></button>
+      <p class="form-note" id="studentAuthMessage">تحتاج إلى حساب مفعّل من إدارة الكلية.</p>
+    </form>
+  </div>
+
+  <div class="app-shell hidden" id="studentApp"><div class="portal">
+    <div class="portal-title"><h2><svg class="ico" viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5zM6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5M22 9v6"/></svg> بوابة الطالب</h2></div>
+    <div class="userbar">
+      <div class="avatar" id="studentAvatar">ط</div>
+      <div class="user-copy"><b id="studentName">الطالب</b><small>الرقم الجامعي: <span id="studentNumber">—</span></small></div>
+      <div class="userbar-actions">
+        <button class="icon-btn" data-view="notifications" aria-label="الإشعارات"><svg class="ico" viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg><i id="notifBadge" class="nav-badge hidden">0</i></button>
+        <button class="logout-btn" id="studentLogout">تسجيل الخروج</button>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="nav-link active" data-view="overview">نظرة عامة</button>
+      <button class="nav-link" data-view="statement">كشف الحساب</button>
+      <button class="nav-link" data-view="payments">مدفوعاتي</button>
+      <button class="nav-link" data-view="notifications">الإشعارات</button>
+    </nav>
+
+    <div class="content">
+      <div class="page-head"><span class="eyebrow" id="studentBreadcrumb">الحساب المالي / نظرة عامة</span><h2 id="studentPageTitle">نظرة عامة</h2></div>
+
+      <section class="view-section" id="view-overview">
+        <div class="balance-grid">
+          <article class="balance-card bc-blue"><div class="card-top"><svg class="ico" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8zM14 3v5h5M9 13h6M9 17h6"/></svg>إجمالي الرسوم</div><strong id="studentTotalFees">—</strong><small>الرسوم المفروضة عليك</small></article>
+          <article class="balance-card bc-orange"><div class="card-top"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h13v4M3 7v10a2 2 0 002 2h14a1 1 0 001-1v-3M3 7h16a1 1 0 011 1v3M16 14h5v-3h-5a1.5 1.5 0 000 3z"/></svg>المبلغ المتبقي</div><strong id="studentRemaining">—</strong><small>قيد المراجعة: <b id="studentPending">—</b></small></article>
+          <article class="balance-card bc-teal"><div class="card-top"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h13v4M3 7v10a2 2 0 002 2h14a1 1 0 001-1v-3M3 7h16a1 1 0 011 1v3M16 14h5v-3h-5a1.5 1.5 0 000 3z"/></svg>المبلغ المدفوع</div><strong id="studentPaid">—</strong><small>دفعات تم اعتمادها حتى الآن</small></article>
+        </div>
+        <div class="content-grid">
+          <section class="surface-card"><div class="section-heading"><h3>نظرة على الرسوم</h3></div>
+            <div class="donut-wrap"><div class="donut" id="donutChart"><div class="donut-label"><b id="donutPct">0%</b><small>مدفوع</small></div></div>
+            <div class="legend"><span><i style="background:var(--blue)"></i>مدفوع</span><span><i style="background:var(--orange)"></i>متبقٍ</span></div></div>
+          </section>
+          <section class="surface-card"><div class="section-heading"><h3>سجل الدفعات</h3><button class="text-button" data-go="payments">عرض الكل</button></div>
+            <div class="table-wrap"><table><thead><tr><th>الحالة</th><th>المبلغ</th><th>رقم الإيصال</th><th>التاريخ</th></tr></thead><tbody id="payLogRows"><tr><td colspan="4" class="empty-state">جارٍ تحميل بيانات الحساب...</td></tr></tbody></table></div>
+          </section>
+        </div>
+        <section class="surface-card" style="margin-top:14px"><div class="section-heading"><h3>إشعارات الإدارة</h3><button class="text-button" data-go="notifications">عرض الكل</button></div>
+          <div class="notice-list" id="overviewNotifs"><div class="empty-state">لا توجد إشعارات.</div></div>
+          <div class="pay-row"><button class="btn btn-pay" data-go="payments">دفع الآن</button></div>
+        </section>
+      </section>
+
+      <section class="view-section hidden" id="view-statement">
+        <div class="surface-card">
+          <div class="section-heading"><div><h3>كشف الحساب المالي</h3><p class="muted">يعرض الرسوم المفروضة والمدفوعات المسجلة على حسابك.</p></div><button class="btn btn-soft" id="printStatement">طباعة الكشف</button></div>
+          <div class="table-wrap"><table><thead><tr><th>البيان</th><th>الفصل الدراسي</th><th>تاريخ التسجيل</th><th>المبلغ</th><th>الحالة</th></tr></thead><tbody id="statementRows"><tr><td colspan="5" class="empty-state">لا توجد بيانات بعد.</td></tr></tbody></table></div>
+        </div>
+      </section>
+
+      <section class="view-section hidden" id="view-payments">
+        <div class="content-grid payment-layout" style="margin-top:0">
+          <section class="surface-card"><div class="section-heading"><div><h3>إثبات الدفع</h3><p class="muted">أدخل بيانات التحويل كما تظهر في إشعار البنك.</p></div></div>
+            <form id="paymentForm" class="stack-form">
+              <label>طريقة الدفع<select id="paymentMethod" required><option value="">اختر طريقة الدفع</option><option value="bankak">بنكك</option><option value="fawry">فوري</option><option value="other">طريقة أخرى</option></select></label>
+              <div class="form-row"><label>المبلغ المحوّل<input id="paymentAmount" type="number" min="1" step="0.01" placeholder="مثال: 25000" required></label><label>رقم العملية<input id="transactionRef" type="text" maxlength="100" placeholder="رقم مرجع التحويل" required></label></div>
+              <label>تاريخ التحويل<input id="paymentDate" type="date" required></label>
+              <label class="upload-box"><span class="upload-symbol">↑</span><b>صورة إشعار التحويل</b><small>PNG أو JPG أو PDF · الحد الأقصى 5MB</small><input id="paymentProof" type="file" accept="image/png,image/jpeg,application/pdf" required></label>
+              <button class="btn btn-primary" type="submit">إرسال للمراجعة</button><p class="form-note" id="paymentMessage">لن تُخصم الدفعة من المتبقي إلا بعد اعتمادها من المحاسب.</p>
+            </form>
+          </section>
+          <section class="surface-card"><div class="section-heading"><h3>حالة مدفوعاتي</h3></div><div id="paymentHistory" class="activity-list"><div class="empty-state">لا توجد مدفوعات مسجلة.</div></div></section>
+        </div>
+      </section>
+
+      <section class="view-section hidden" id="view-notifications">
+        <div class="surface-card">
+          <div class="section-heading"><div><h3>إشعارات الإدارة</h3><p class="muted">آخر التنبيهات المتعلقة برسومك ومدفوعاتك.</p></div></div>
+          <div id="notificationList" class="activity-list"><div class="empty-state">لا توجد إشعارات.</div></div>
+        </div>
+      </section>
+    </div>
+  </div></div>
+
+  <footer class="site-footer">
+    <div class="foot-title">CEMS Financial Management Platform • منصة الإدارة المالية</div>
+    <div class="foot-items"><span>🔒 آمن ومحمي</span><span>☁️ سحابي متكامل</span><span>📱 متجاوب مع جميع الأجهزة</span></div>
+  </footer>
+  <div class="toast hidden" id="toast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script><script src="app.js"></script>
+</body></html>
