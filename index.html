@@ -26,8 +26,8 @@
         <div class="mobile-brand"><span class="brand-mark">E</span> EduLedger</div>
         <span class="eyebrow">مرحبًا بعودتك</span>
         <h2>تسجيل دخول الطالب</h2>
-        <p class="muted">استخدم البريد الإلكتروني وكلمة المرور المسجلين لدى الأكاديمية.</p>
-        <label>البريد الإلكتروني<input id="studentEmail" type="email" autocomplete="username" placeholder="student@example.com" required></label>
+        <p class="muted">ادخل بالرقم الجامعي (أو البريد الإلكتروني) وكلمة المرور المسجلة لدى الأكاديمية.</p>
+        <label>الرقم الجامعي أو البريد الإلكتروني<input id="studentEmail" type="text" inputmode="email" autocomplete="username" autocapitalize="none" placeholder="مثال: 20231045" required></label>
         <label>كلمة المرور<input id="studentPassword" type="password" autocomplete="current-password" placeholder="••••••••" required></label>
         <button class="btn btn-primary btn-wide" type="submit">دخول إلى حسابي <span>←</span></button>
         <p class="form-note" id="studentAuthMessage">تحتاج إلى حساب مفعّل من إدارة الأكاديمية.</p>
@@ -43,6 +43,7 @@
         <button class="nav-link active" data-view="overview"><span class="nav-icon">⌂</span> نظرة عامة</button>
         <button class="nav-link" data-view="statement"><span class="nav-icon">▤</span> كشف الحساب</button>
         <button class="nav-link" data-view="payments"><span class="nav-icon">↗</span> مدفوعاتي</button>
+        <button class="nav-link" data-view="notifications"><span class="nav-icon">✉</span> الإشعارات <i id="notifBadge" class="nav-badge hidden">0</i></button>
       </nav>
       <div class="sidebar-bottom">
         <div class="support-card"><span class="support-icon">?</span><b>تحتاج مساعدة؟</b><small>تواصل مع الشؤون المالية في الأكاديمية.</small></div>
@@ -92,6 +93,12 @@
             </form>
           </section>
           <section class="surface-card"><div class="section-heading"><div><span class="eyebrow">سجل التحويلات</span><h3>حالة مدفوعاتي</h3></div></div><div id="paymentHistory" class="activity-list"><div class="empty-state">لا توجد مدفوعات مسجلة.</div></div></section>
+        </div>
+      </section>
+      <section class="view-section hidden" id="view-notifications">
+        <div class="surface-card">
+          <div class="section-heading"><div><span class="eyebrow">من الإدارة المالية</span><h3>الإشعارات</h3><p class="muted">آخر التنبيهات المتعلقة برسومك ومدفوعاتك.</p></div></div>
+          <div id="notificationList" class="activity-list"><div class="empty-state">لا توجد إشعارات.</div></div>
         </div>
       </section>
       <footer class="app-footer">EduLedger <span>·</span> بياناتك المالية متاحة لك وللموظفين المخوّلين فقط.</footer>
